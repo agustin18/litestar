@@ -74,6 +74,13 @@ __all__ = ("FieldDefinition",)
 
 T = TypeVar("T", bound=KwargDefinition)
 
+_BODY_MARKER_MAP: dict[str | RequestEncodingType, str] = {
+    RequestEncodingType.JSON: "JSONBody[<type>]",
+    RequestEncodingType.MESSAGEPACK: "MsgPackBody[<type>]",
+    RequestEncodingType.MULTI_PART: "MultipartBody[<type>]",
+    RequestEncodingType.URL_ENCODED: "URLEncodedBody[<type>]",
+}
+
 
 def _annotated_types_extractor(meta: Any, is_sequence_container: bool) -> dict[str, Any]:  # noqa: C901
     if annotated_types is Empty:  # type: ignore[comparison-overlap]  # pragma: no branch
@@ -471,17 +478,11 @@ class FieldDefinition:
                     can_use_marker = (
                         not kwarg_definition.is_constrained and kwarg_definition.multipart_form_part_limit is None
                     )
-                    if can_use_marker:
-                        alternative = {
-                            RequestEncodingType.JSON: "JSONBody[<type>]",
-                            RequestEncodingType.MESSAGEPACK: "MsgPackBody[<type>]",
-                            RequestEncodingType.MULTI_PART: "MultiPartBody[<type>]",
-                            RequestEncodingType.URL_ENCODED: "URLEncodedBBody[<type>]",
-                        }[RequestEncodingType(kwarg_definition.media_type)]
-                    else:
-                        alternative = "Annotated[<type>, Body(...)]"
+                    alternative = (
+                        _BODY_MARKER_MAP.get(kwarg_definition.media_type) if can_use_marker else None
+                    ) or "Annotated[<type>, Body(...)]"
                     warnings.warn(
-                        "Deprecated use of 'Body()' as a default value. This will be removed"
+                        "Deprecated use of 'Body()' as a default value. This will be removed "
                         f"in Litestar 3.0. Use 'data: {alternative}' instead of "
                         "'data: <type> = Body(...)'",
                         stacklevel=2,
