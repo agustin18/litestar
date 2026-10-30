@@ -26,7 +26,7 @@ from litestar.params import RawBody
 from litestar.response.base import ASGIResponse
 from litestar.serialization import encode_json, encode_msgpack
 from litestar.status_codes import HTTP_400_BAD_REQUEST, HTTP_413_REQUEST_ENTITY_TOO_LARGE
-from litestar.testing import create_test_client
+from litestar.testing import RequestFactory, create_test_client
 
 if TYPE_CHECKING:
     from litestar.types import ASGIApp, Receive, Scope, Send
@@ -395,6 +395,13 @@ def test_request_cookies() -> None:
         assert response.text == "Hello, world!"
         response = client.get("/")
         assert response.text == "Hello, cookies!"
+
+
+def test_request_cookies_with_multiple_headers() -> None:
+    request = RequestFactory().get()
+    request.scope["headers"] = [(b"cookie", b"first=1"), (b"cookie", b"second=2")]
+
+    assert request.cookies == {"first": "1", "second": "2"}
 
 
 def test_chunked_encoding() -> None:
